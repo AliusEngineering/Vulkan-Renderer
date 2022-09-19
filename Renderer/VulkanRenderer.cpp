@@ -38,7 +38,7 @@ VulkanRenderer::EndFrame()
 [[maybe_unused]] bool VulkanRenderer::appendCall = ([]() {
   Alius::s_RendererModules.insert(
     { "AlsVkRenderer", [](size_t width, size_t height, const char* title) {
-	   return std::make_unique<VulkanRenderer>(width, height, title);
+	   return std::make_shared<VulkanRenderer>(width, height, title);
      } });
   return true;
 })();

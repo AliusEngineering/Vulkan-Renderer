@@ -5,6 +5,7 @@
 #include "Pipeline/VulkanRendererPipeline.hpp"
 
 #include "Window/VulkanWindow.hpp"
+#include "WindowBase/Window.hpp"
 
 namespace AliusModules {
 
@@ -13,6 +14,11 @@ class VulkanRenderer : public Alius::Renderer
 public:
   VulkanRenderer(size_t width, size_t height, const char* title);
   ~VulkanRenderer() override;
+
+  std::shared_ptr<Alius::Window> GetWindow() const override
+  {
+	return std::make_shared<VulkanWindow>(m_Window);
+  };
 
   void BeginFrame() override;
 

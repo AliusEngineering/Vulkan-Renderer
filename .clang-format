@@ -1,0 +1,6 @@
+BasedOnStyle: Mozilla
+
+UseTab: ForIndentation
+TabWidth: 4
+
+IncludeBlocks: Preserve

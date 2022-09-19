@@ -1,0 +1,29 @@
+[submodule "dependencies/RendererBase"]
+	path = dependencies/RendererBase
+	url = https://github.com/AliusEngineering/Renderer-Base
+	branch = master
+	shallow = true
+
+[submodule "3rd-party/logger"]
+	path = 3rd-party/logger
+	url = https://github.com/scriptSQD/untitled-logger
+	branch = master
+	shallow = true
+
+[submodule "Window/3rd-party/glfw"]
+	path = Window/3rd-party/glfw
+	url = https://github.com/glfw/glfw
+	shallow = true
+[submodule "Window/3rd-party/vkfw"]
+	path = Window/3rd-party/vkfw
+	url = https://github.com/Cvelth/vkfw
+    shallow = true
+[submodule "Window/dependencies/WindowBase"]
+	path = Window/dependencies/WindowBase
+	url = https://github.com/AliusEngineering/Window-Base
+	shallow = true
+
+[submodule "3rd-party/shaderc"]
+	path = 3rd-party/shaderc
+	url = https://github.com/google/shaderc
+	branch = main

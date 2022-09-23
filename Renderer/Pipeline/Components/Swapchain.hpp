@@ -6,49 +6,34 @@
 
 namespace AliusModules {
 
-struct SwapchainSupportDetails
-{
-  vk::SurfaceCapabilitiesKHR SurfaceCaps;
-  std::vector<vk::SurfaceFormatKHR> SurfaceFormats;
-  std::vector<vk::PresentModeKHR> PresentModes;
-};
-
-struct SwapchainMeta
-{
-  vk::Format ImageFormat;
-  vk::Extent2D Extent;
-};
+struct SwapchainSupportDetails;
 
 class Swapchain
 {
 public:
-  Swapchain(const Instance& instance);
+  explicit Swapchain(Instance* instance);
 
   vk::SwapchainKHR GetSwapchain() const { return m_Swapchain; }
 
   vk::Queue GetPresentQueue() const { return m_PresentQueue; }
   vk::Queue GetComputeQueue() const { return m_ComputeQueue; }
 
-  SwapchainMeta GetMeta() const
-  {
-	return { m_SwapchainImageFormat, m_SwapchainExtent };
-  }
-
   uint32_t GetMaxConcurrentFrames() const { return m_MaxConcurrentFrames; }
 
   std::vector<vk::ImageView> GetImageViews() const { return m_ImageViews; }
 
+  void CleanupBeforeRecreate();
   bool Recreate();
 
   void Cleanup();
 
+  vk::Extent2D Extent;
+  vk::Format ImageFormat;
+
 private:
-  Instance m_Instance;
+  Instance* m_Instance;
 
   vk::SwapchainKHR m_Swapchain;
-
-  vk::Format m_SwapchainImageFormat;
-  vk::Extent2D m_SwapchainExtent;
 
   vk::Queue m_ComputeQueue, m_PresentQueue;
 
@@ -56,7 +41,8 @@ private:
   std::vector<vk::ImageView> m_ImageViews{};
 
 private:
-  vk::SwapchainKHR CreateSwapchain();
+  vk::SwapchainKHR CreateSwapchain(
+    const vk::SwapchainKHR& oldSwapchain = nullptr);
 
   std::vector<vk::Image> CreateImages(const vk::Device& device,
                                       const vk::SwapchainKHR& swapchain);
@@ -67,6 +53,13 @@ private:
 
 private:
   uint32_t m_MaxConcurrentFrames = 0;
+};
+
+struct SwapchainSupportDetails
+{
+  vk::SurfaceCapabilitiesKHR SurfaceCaps;
+  std::vector<vk::SurfaceFormatKHR> SurfaceFormats;
+  std::vector<vk::PresentModeKHR> PresentModes;
 };
 
 } // AliusModules

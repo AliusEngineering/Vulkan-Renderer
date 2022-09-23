@@ -24,8 +24,10 @@ public:
 	return vkfw::getRequiredInstanceExtensions(count);
   }
 
+  /* TODO: Make an API to append event listeners to the window. */
+
 private:
-  static vkfw::Window m_Window;
+  inline static vkfw::Window m_Window{};
 
   bool m_IsActive = false;
 };

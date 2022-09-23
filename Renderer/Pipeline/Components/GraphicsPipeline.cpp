@@ -2,17 +2,17 @@
 
 namespace AliusModules {
 
-GraphicsPipeline::GraphicsPipeline(const Instance& instance)
+GraphicsPipeline::GraphicsPipeline(Instance* instance)
   : m_Instance(instance)
-  , m_Swapchain(m_Instance)
+  , m_Swapchain(new Swapchain(m_Instance))
 {
   // Attempt to create vertex shader from source
-  m_Shaders.emplace_back(m_Instance.GetDevice(),
+  m_Shaders.emplace_back(m_Instance->GetDevice(),
                          "resources/shaders/basic_vertex.glsl",
                          vk::ShaderStageFlagBits::eVertex);
 
   // Attempt to create fragment shader from source
-  m_Shaders.emplace_back(m_Instance.GetDevice(),
+  m_Shaders.emplace_back(m_Instance->GetDevice(),
                          "resources/shaders/basic_fragment.glsl",
                          vk::ShaderStageFlagBits::eFragment);
 
@@ -27,7 +27,7 @@ GraphicsPipeline::GraphicsPipeline(const Instance& instance)
   m_Pipeline = CreatePipeline();
 
   // Create synchronizers
-  for (int i = 0; i < m_Swapchain.GetMaxConcurrentFrames(); i++) {
+  for (int i = 0; i < m_Swapchain->GetMaxConcurrentFrames(); i++) {
 	m_ImageSemaphores.emplace_back(CreateSemaphore());
 	m_RenderSemaphores.emplace_back(CreateSemaphore());
 
@@ -35,46 +35,42 @@ GraphicsPipeline::GraphicsPipeline(const Instance& instance)
   }
 }
 
-bool
+uint32_t
 GraphicsPipeline::AcquireImage(uint32_t index)
 {
-  if (index >= m_Swapchain.GetMaxConcurrentFrames()) {
+  if (index >= m_Swapchain->GetMaxConcurrentFrames()) {
 	SQD_WARN("Bad image index: tried to acquire index {} while maximum "
 	         "available is {}",
 	         index,
-	         m_Swapchain.GetMaxConcurrentFrames());
-	return false;
+	         m_Swapchain->GetMaxConcurrentFrames() - 1);
+	return UINT32_MAX;
   }
 
-  auto device = m_Instance.GetDevice();
+  auto device = m_Instance->GetDevice();
 
   (void)device.waitForFences(
     m_RenderFences.at(index), VK_TRUE, c_SynchronizersTimeout);
 
-  auto imageAcquisitionRes =
-    device.acquireNextImageKHR(m_Swapchain.GetSwapchain(),
-                               c_SynchronizersTimeout,
-                               m_ImageSemaphores.at(index),
-                               nullptr,
-                               &index);
-
-  switch (imageAcquisitionRes) {
+  switch (device.acquireNextImageKHR(m_Swapchain->GetSwapchain(),
+                                     c_SynchronizersTimeout,
+                                     m_ImageSemaphores.at(index),
+                                     nullptr,
+                                     &m_CurrentImageIndex)) {
 	case vk::Result::eSuccess:
 	  break;
 	case vk::Result::eSuboptimalKHR:
 	case vk::Result::eErrorOutOfDateKHR: {
-	  SQD_WARN("Swapchain out-of-date! Recreating.");
-	  m_Swapchain.Recreate();
-	  return false;
+	  RecreateSwapchain();
+	  return UINT32_MAX;
 	}
 	default: {
 	  SQD_WARN("Failed to acquire image from swapchain!");
-	  return false;
+	  return UINT32_MAX;
 	}
   }
 
   device.resetFences(m_RenderFences.at(index));
-  return true;
+  return m_CurrentImageIndex;
 }
 
 bool
@@ -93,30 +89,27 @@ GraphicsPipeline::SubmitToComputeQueue(uint32_t index,
   };
 
   TRY_EXCEPT(
-    m_Swapchain.GetComputeQueue().submit(submitInfo, m_RenderFences.at(index)))
+    m_Swapchain->GetComputeQueue().submit(submitInfo, m_RenderFences.at(index)))
   THROW_ANY("Failed to submit queue!")
 
   return true;
 }
 
 bool
-GraphicsPipeline::PresentQueue(uint32_t index)
+GraphicsPipeline::PresentQueue(uint32_t frameIndex, uint32_t imageIndex)
 {
-  vk::Semaphore signalSemaphores[] = { m_RenderSemaphores.at(index) };
+  vk::Semaphore signalSemaphores[] = { m_RenderSemaphores.at(frameIndex) };
 
-  auto swapchain = m_Swapchain.GetSwapchain();
+  auto swapchain = m_Swapchain->GetSwapchain();
 
-  vk::PresentInfoKHR presentInfo{ signalSemaphores, swapchain, index };
+  vk::PresentInfoKHR presentInfo{ signalSemaphores, swapchain, imageIndex };
 
-  auto presentRes = m_Swapchain.GetPresentQueue().presentKHR(presentInfo);
-
-  switch (presentRes) {
+  switch (m_Swapchain->GetPresentQueue().presentKHR(presentInfo)) {
 	case vk::Result::eSuccess:
 	  break;
 	case vk::Result::eSuboptimalKHR:
 	case vk::Result::eErrorOutOfDateKHR: {
-	  SQD_WARN("Swapchain out-of-date! Recreating.");
-	  m_Swapchain.Recreate();
+	  RecreateSwapchain();
 	  return false;
 	}
 	default: {
@@ -188,7 +181,7 @@ void
 GraphicsPipeline::ConstructRenderPassState()
 {
   m_RenderPassState.AttachmentDescription = { {},
-	                                          m_Swapchain.GetMeta().ImageFormat,
+	                                          m_Swapchain->ImageFormat,
 	                                          vk::SampleCountFlagBits::e1,
 	                                          vk::AttachmentLoadOp::eClear,
 	                                          vk::AttachmentStoreOp::eStore,
@@ -218,7 +211,7 @@ GraphicsPipeline::ConstructRenderPassState()
 
 vk::PipelineLayout
 GraphicsPipeline::CreatePipelineLayout(){
-  TRY_EXCEPT(return m_Instance.GetDevice().createPipelineLayout(
+  TRY_EXCEPT(return m_Instance->GetDevice().createPipelineLayout(
     m_PipelineBakedInState.Layout))
     THROW_ANY("Failed to create pipeline layout!")
 }
@@ -233,7 +226,7 @@ vk::RenderPass GraphicsPipeline::CreateRenderPass()
 	                                   1,
 	                                   &m_RenderPassState.SubpassDependency };
 
-  TRY_EXCEPT(return m_Instance.GetDevice().createRenderPass(createInfo))
+  TRY_EXCEPT(return m_Instance->GetDevice().createRenderPass(createInfo))
   THROW_ANY("Failed to create render pass!")
 }
 
@@ -264,7 +257,7 @@ GraphicsPipeline::CreatePipeline()
 	0
   };
 
-  TRY_EXCEPT(return m_Instance.GetDevice()
+  TRY_EXCEPT(return m_Instance->GetDevice()
                .createGraphicsPipeline(nullptr, createInfo)
                .value)
   THROW_ANY("Failed to create graphics pipeline!")
@@ -274,30 +267,49 @@ std::vector<vk::Framebuffer>
 GraphicsPipeline::CreateFramebuffers()
 {
   std::vector<vk::Framebuffer> ret;
-  for (const auto& imageView : m_Swapchain.GetImageViews()) {
+  for (const auto& imageView : m_Swapchain->GetImageViews()) {
 	vk::ImageView attachments[] = { imageView };
 
 	vk::FramebufferCreateInfo createInfo{ {},
 	                                      m_RenderPass,
 	                                      1,
 	                                      attachments,
-	                                      m_Swapchain.GetMeta().Extent.width,
-	                                      m_Swapchain.GetMeta().Extent.height,
+	                                      m_Swapchain->Extent.width,
+	                                      m_Swapchain->Extent.height,
 	                                      1 };
 
 	TRY_EXCEPT(
-	  ret.emplace_back(m_Instance.GetDevice().createFramebuffer(createInfo)))
+	  ret.emplace_back(m_Instance->GetDevice().createFramebuffer(createInfo)))
 	THROW_ANY("Failed to create framebuffers!")
   }
 
   return ret;
 }
 
+void
+GraphicsPipeline::DestroyFramebuffers()
+{
+  auto device = m_Instance->GetDevice();
+
+  device.waitIdle();
+
+  for (const auto& fb : m_Framebuffers) {
+	device.destroyFramebuffer(fb);
+  }
+}
+
+void
+GraphicsPipeline::RecreateFramebuffers()
+{
+  m_Instance->GetDevice().waitIdle();
+  m_Framebuffers = CreateFramebuffers();
+}
+
 vk::Semaphore
 GraphicsPipeline::CreateSemaphore()
 {
   vk::SemaphoreCreateInfo createInfo{};
-  TRY_EXCEPT(return m_Instance.GetDevice().createSemaphore(createInfo))
+  TRY_EXCEPT(return m_Instance->GetDevice().createSemaphore(createInfo))
   THROW_ANY("Failed to create semaphore!")
 }
 
@@ -305,16 +317,25 @@ vk::Fence
 GraphicsPipeline::CreateFence()
 {
   vk::FenceCreateInfo createInfo{ vk::FenceCreateFlagBits::eSignaled };
-  TRY_EXCEPT(return m_Instance.GetDevice().createFence(createInfo))
+  TRY_EXCEPT(return m_Instance->GetDevice().createFence(createInfo))
   THROW_ANY("Failed to create semaphore!")
+}
+
+void
+GraphicsPipeline::RecreateSwapchain()
+{
+  DestroyFramebuffers();
+  m_Swapchain->CleanupBeforeRecreate();
+  m_Swapchain->Recreate();
+  RecreateFramebuffers();
 }
 
 void
 GraphicsPipeline::Cleanup()
 {
-  auto device = m_Instance.GetDevice();
+  auto device = m_Instance->GetDevice();
 
-  for (int i = 0; i < m_Swapchain.GetMaxConcurrentFrames(); i++) {
+  for (int i = 0; i < m_Swapchain->GetMaxConcurrentFrames(); i++) {
 	device.destroySemaphore(m_RenderSemaphores.at(i));
 	device.destroySemaphore(m_ImageSemaphores.at(i));
 	device.destroyFence(m_RenderFences.at(i));
@@ -330,7 +351,7 @@ GraphicsPipeline::Cleanup()
 	device.destroyShaderModule(shader.GetModule());
   }
 
-  m_Swapchain.Cleanup();
+  m_Swapchain->Cleanup();
 }
 
 } // AliusModules

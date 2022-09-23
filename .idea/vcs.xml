@@ -17,6 +17,7 @@
     <mapping directory="$PROJECT_DIR$/Window/3rd-party/vkfw" vcs="Git" />
     <mapping directory="$PROJECT_DIR$/Window/dependencies/WindowBase" vcs="Git" />
     <mapping directory="$PROJECT_DIR$/dependencies/RendererBase" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/dependencies/RendererBase/Dependencies/Window-Base" vcs="Git" />
     <mapping directory="$PROJECT_DIR$/dependencies/WindowBase" vcs="Git" />
   </component>
 </project>

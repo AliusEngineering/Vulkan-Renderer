@@ -6,15 +6,11 @@
 
 #include "Pipeline/VulkanHelpers.hpp"
 
+#include "Globals.hpp"
+
 #include "set"
 #include "unordered_map"
 #include "vector"
-
-std::vector<const char*> g_RequiredExtensions = {};
-
-std::vector<const char*> g_RequiredLayers = { "VK_LAYER_KHRONOS_validation" };
-
-vk::PhysicalDeviceFeatures g_RequiredPhysicalDeviceFeatures{};
 
 #ifdef ALS_DEBUG
 constexpr bool g_ValidationLayers = true;

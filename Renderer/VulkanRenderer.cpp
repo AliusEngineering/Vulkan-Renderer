@@ -4,8 +4,8 @@ namespace AliusModules {
 
 VulkanRenderer::VulkanRenderer(size_t width, size_t height, const char* title)
   : m_Window(width, height, title)
+  , m_RendererPipeline()
 {
-  m_RendererPipeline = {};
 }
 
 VulkanRenderer::~VulkanRenderer()
@@ -16,7 +16,8 @@ VulkanRenderer::~VulkanRenderer()
 void
 VulkanRenderer::BeginFrame()
 {
-  m_RendererPipeline.BeginFrame();
+  if (m_Window.IsActive())
+	m_RendererPipeline.BeginFrame();
 }
 
 void
@@ -25,22 +26,16 @@ VulkanRenderer::Draw(uint32_t vertexCount,
                      uint32_t instanceCount,
                      uint32_t firstInstance)
 {
-  m_RendererPipeline.Draw(
-    vertexCount, instanceCount, firstVertex, firstInstance);
+  if (m_Window.IsActive())
+	m_RendererPipeline.Draw(
+	  vertexCount, instanceCount, firstVertex, firstInstance);
 }
 
 void
 VulkanRenderer::EndFrame()
 {
-  m_RendererPipeline.EndFrame();
+  if (m_Window.IsActive())
+	m_RendererPipeline.EndFrame();
 }
-
-[[maybe_unused]] bool VulkanRenderer::appendCall = ([]() {
-  Alius::s_RendererModules.insert(
-    { "AlsVkRenderer", [](size_t width, size_t height, const char* title) {
-	   return std::make_shared<VulkanRenderer>(width, height, title);
-     } });
-  return true;
-})();
 
 } // AliusModules

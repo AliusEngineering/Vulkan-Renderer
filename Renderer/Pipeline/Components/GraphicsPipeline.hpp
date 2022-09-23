@@ -35,13 +35,14 @@ struct RenderPassState
 class GraphicsPipeline
 {
 public:
-  explicit GraphicsPipeline(const Instance& instance);
+  explicit GraphicsPipeline(Instance* instance);
 
   /**
    * @param index Index of image to acquire from swapchain.
-   * @return True if the result of image acquisition is not error.
+   * @return Index of acquired image or UINT32_MAX on failure. Use later to get
+   * the proper framebuffer.
    */
-  bool AcquireImage(uint32_t index);
+  uint32_t AcquireImage(uint32_t index);
 
   /**
    * @param index Index of current frame
@@ -53,13 +54,14 @@ public:
 
   /**
    *
-   * @param index Index of the presented image, should match one from
-   * AcquireImage.
+   * @param frameIndex Index of current frame (to get appropriate synchronizers,
+   * etc.)
+   * @param imageIndex Index of image(-s) to present.
    * @return True if presentation resulted in no errors.
    */
-  bool PresentQueue(uint32_t index);
+  bool PresentQueue(uint32_t frameIndex, uint32_t imageIndex);
 
-  Swapchain GetSwapchain() const { return m_Swapchain; }
+  Swapchain* GetSwapchain() { return m_Swapchain; }
 
   vk::RenderPass GetRenderPass() const { return m_RenderPass; }
   vk::Framebuffer GetFramebuffer(uint32_t index) const {
@@ -84,10 +86,14 @@ private:
   vk::Pipeline CreatePipeline();
 
   std::vector<vk::Framebuffer> CreateFramebuffers();
+  void DestroyFramebuffers();
+  void RecreateFramebuffers();
+
+  void RecreateSwapchain();
 
 private:
-  Instance m_Instance;
-  Swapchain m_Swapchain;
+  Instance* m_Instance;
+  Swapchain* m_Swapchain;
 
   std::vector<VulkanShader> m_Shaders;
 
@@ -102,6 +108,9 @@ private:
 
   std::vector<vk::Semaphore> m_RenderSemaphores, m_ImageSemaphores;
   std::vector<vk::Fence> m_RenderFences;
+
+private:
+  uint32_t m_CurrentImageIndex;
 
 private:
   vk::Semaphore CreateSemaphore();

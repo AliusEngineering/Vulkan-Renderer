@@ -100,7 +100,7 @@ InstanceHelpers::ResolveQueueFamilies(const vk::PhysicalDevice& device,
 	if (queueFamily.queueFlags & vk::QueueFlagBits::eGraphics &&
 	    queueFamily.queueFlags & vk::QueueFlagBits::eCompute &&
 	    device.getSurfaceSupportKHR(index, targetSurface)) {
-	  ret = { index, index };
+	  return { index, index };
 	}
 
 	index++;

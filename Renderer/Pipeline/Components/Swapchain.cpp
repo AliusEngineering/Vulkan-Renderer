@@ -2,25 +2,26 @@
 
 namespace AliusModules {
 
-Swapchain::Swapchain(const Instance& instance)
+Swapchain::Swapchain(Instance* instance)
   : m_Instance(instance)
 {
   m_Swapchain = CreateSwapchain();
-  m_ComputeQueue = SwapchainHelpers::GetQueue(
-    m_Instance.GetDevice(), m_Instance.GetQueueFamilies().Compute);
-  m_PresentQueue = SwapchainHelpers::GetQueue(
-    m_Instance.GetDevice(), m_Instance.GetQueueFamilies().Present);
 
-  m_Images = CreateImages(m_Instance.GetDevice(), m_Swapchain);
+  m_ComputeQueue = SwapchainHelpers::GetQueue(
+    m_Instance->GetDevice(), m_Instance->GetQueueFamilies().Compute);
+  m_PresentQueue = SwapchainHelpers::GetQueue(
+    m_Instance->GetDevice(), m_Instance->GetQueueFamilies().Present);
+
+  m_Images = CreateImages(m_Instance->GetDevice(), m_Swapchain);
   m_ImageViews =
-    CreateImageViews(m_Instance.GetDevice(), m_Swapchain, m_Images);
+    CreateImageViews(m_Instance->GetDevice(), m_Swapchain, m_Images);
 }
 
 vk::SwapchainKHR
-Swapchain::CreateSwapchain()
+Swapchain::CreateSwapchain(const vk::SwapchainKHR& oldSwapchain)
 {
   auto supportDetails = SwapchainHelpers::QuerySupportDetails(
-    m_Instance.GetPhysicalDevice(), m_Instance.GetSurface());
+    m_Instance->GetPhysicalDevice(), m_Instance->GetSurface());
 
   if (supportDetails.PresentModes.empty() ||
       supportDetails.SurfaceFormats.empty()) {
@@ -37,8 +38,8 @@ Swapchain::CreateSwapchain()
     SwapchainHelpers::PickOptimalConcurrentFrames(presentMode);
   auto extent = SwapchainHelpers::PickExtend2D(supportDetails.SurfaceCaps);
 
-  m_SwapchainImageFormat = format.format;
-  m_SwapchainExtent = extent;
+  ImageFormat = format.format;
+  Extent = extent;
 
   uint32_t imageCount = std::clamp(supportDetails.SurfaceCaps.minImageCount + 3,
                                    supportDetails.SurfaceCaps.minImageCount,
@@ -48,7 +49,7 @@ Swapchain::CreateSwapchain()
 
   vk::SwapchainCreateInfoKHR createInfo{
 	{},
-	m_Instance.GetSurface(),
+	m_Instance->GetSurface(),
 	imageCount,
 	format.format,
 	format.colorSpace,
@@ -57,7 +58,7 @@ Swapchain::CreateSwapchain()
 	vk::ImageUsageFlagBits::eColorAttachment
   };
 
-  auto queueFamilies = m_Instance.GetQueueFamilies();
+  auto queueFamilies = m_Instance->GetQueueFamilies();
 
   if (queueFamilies.Present != queueFamilies.Compute) {
 	createInfo.imageSharingMode = vk::SharingMode::eConcurrent;
@@ -75,16 +76,36 @@ Swapchain::CreateSwapchain()
   createInfo.presentMode = presentMode;
   createInfo.clipped = VK_TRUE;
 
-  createInfo.oldSwapchain = nullptr;
+  createInfo.oldSwapchain = oldSwapchain;
 
-  TRY_EXCEPT(return m_Instance.GetDevice().createSwapchainKHR(createInfo))
+  TRY_EXCEPT(return m_Instance->GetDevice().createSwapchainKHR(createInfo))
   THROW_ANY("Failed to create swapchain!")
+}
+
+void
+Swapchain::CleanupBeforeRecreate()
+{
+  auto device = m_Instance->GetDevice();
+
+  device.waitIdle();
+
+  for (const auto& imageView : m_ImageViews) {
+	device.destroyImageView(imageView);
+  }
 }
 
 bool
 Swapchain::Recreate()
 {
-  // Not yet implemented
+  auto device = m_Instance->GetDevice();
+
+  device.waitIdle();
+
+  m_Swapchain = CreateSwapchain(m_Swapchain);
+
+  m_Images = CreateImages(device, m_Swapchain);
+  m_ImageViews = CreateImageViews(device, m_Swapchain, m_Images);
+
   return true;
 }
 
@@ -106,7 +127,7 @@ std::vector<vk::ImageView> Swapchain::CreateImageViews(
 	  {},
 	  image,
 	  vk::ImageViewType::e2D,
-	  m_SwapchainImageFormat,
+	  ImageFormat,
 	  { vk::ComponentSwizzle::eIdentity,
 	    vk::ComponentSwizzle::eIdentity,
 	    vk::ComponentSwizzle::eIdentity,
@@ -122,7 +143,9 @@ std::vector<vk::ImageView> Swapchain::CreateImageViews(
 void
 Swapchain::Cleanup()
 {
-  auto device = m_Instance.GetDevice();
+  auto device = m_Instance->GetDevice();
+
+  device.waitIdle();
 
   for (const auto& imageView : m_ImageViews) {
 	device.destroyImageView(imageView);

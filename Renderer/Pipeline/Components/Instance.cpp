@@ -73,13 +73,14 @@ Instance::CreateDevice(const vk::PhysicalDevice& physicalDevice)
   m_QueueFamilies =
     InstanceHelpers::ResolveQueueFamilies(physicalDevice, m_Surface);
 
-  std::vector<uint32_t> createQueues = { m_QueueFamilies.Compute,
-	                                     m_QueueFamilies.Present };
+  std::set<uint32_t> createQueues = { m_QueueFamilies.Compute,
+	                                  m_QueueFamilies.Present };
 
   std::vector<vk::DeviceQueueCreateInfo> queueCreateInfos{};
   queueCreateInfos.reserve(createQueues.size());
   for (const auto& queue : createQueues) {
-	queueCreateInfos.push_back({ {}, queue, 1, &c_BaseQueuePriority });
+	queueCreateInfos.emplace_back(
+	  vk::DeviceQueueCreateFlags{}, queue, 1, &c_BaseQueuePriority);
   }
 
   vk::DeviceCreateInfo createInfo(

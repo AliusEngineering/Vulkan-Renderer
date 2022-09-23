@@ -13,7 +13,7 @@ namespace AliusModules {
 class VulkanRendererPipeline
 {
 public:
-  VulkanRendererPipeline();
+  explicit VulkanRendererPipeline();
 
   void BeginFrame();
 
@@ -27,13 +27,16 @@ public:
   void Shutdown();
 
 private:
-  Instance m_Instance;
-  GraphicsPipeline m_GraphicsPipeline;
-  CommandPipeline m_CommandPipeline;
+  Instance* m_Instance;
+  GraphicsPipeline* m_GraphicsPipeline;
+  CommandPipeline* m_CommandPipeline;
 
 private:
   uint32_t m_FrameIndex = 0;
+  uint32_t m_ImageIndex = 0;
   uint32_t m_MaxFrameIndex = 0;
+
+  bool m_FrameBegun = false;
 };
 
 } // AliusModules

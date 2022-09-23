@@ -15,9 +15,9 @@ struct QueueFamilies
 class Instance
 {
 public:
-  Instance();
+  explicit Instance();
 
-  vk::Instance GetInstance() const { return m_Instance; }
+  vk::Instance GetVkInstance() const { return m_Instance; }
   vk::PhysicalDevice GetPhysicalDevice() const { return m_PhysicalDevice; }
   vk::SurfaceKHR GetSurface() const { return m_Surface; }
   vk::Device GetDevice() const { return m_Device; }

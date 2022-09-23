@@ -1,7 +1,5 @@
 #include "VulkanShader.hpp"
 
-#include <utility>
-
 #include "Shader/Compiler.hpp"
 
 namespace AliusModules {
@@ -28,7 +26,7 @@ VulkanShader::CreateFromSource(std::string_view filepath)
 
   vk::ShaderModuleCreateInfo createInfo{ {}, m_Meta.Size, m_Meta.Code.data() };
   TRY_EXCEPT(m_Module = m_Device.createShaderModule(createInfo); m_IsOK = true;
-             m_PipelineStageCreateInfo = { {}, m_Stage, m_Module })
+             m_PipelineStageCreateInfo = { {}, m_Stage, m_Module, "main" })
   WARN_ANY("Failed to create shader module!")
 }
 

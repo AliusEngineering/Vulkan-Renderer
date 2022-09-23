@@ -2,8 +2,7 @@
 
 namespace AliusModules {
 
-CommandPipeline::CommandPipeline(const Instance& instance,
-                                 const Swapchain& swapchain)
+CommandPipeline::CommandPipeline(Instance* instance, Swapchain* swapchain)
   : m_Instance(instance)
   , m_Swapchain(swapchain)
 {
@@ -16,10 +15,10 @@ CommandPipeline::CreateCommandPool()
 {
   vk::CommandPoolCreateInfo createInfo{
 	{ vk::CommandPoolCreateFlagBits::eResetCommandBuffer },
-	m_Instance.GetQueueFamilies().Compute
+	m_Instance->GetQueueFamilies().Compute
   };
 
-  TRY_EXCEPT(return m_Instance.GetDevice().createCommandPool(createInfo))
+  TRY_EXCEPT(return m_Instance->GetDevice().createCommandPool(createInfo))
   THROW_ANY("Failed to create command pool!")
 }
 
@@ -29,21 +28,18 @@ CommandPipeline::AllocateCommandBuffers()
   vk::CommandBufferAllocateInfo allocateInfo{
 	m_Pool,
 	vk::CommandBufferLevel::ePrimary,
-	m_Swapchain.GetMaxConcurrentFrames()
+	m_Swapchain->GetMaxConcurrentFrames()
   };
 
-  TRY_EXCEPT(return m_Instance.GetDevice().allocateCommandBuffers(allocateInfo))
+  TRY_EXCEPT(
+    return m_Instance->GetDevice().allocateCommandBuffers(allocateInfo))
   THROW_ANY("Failed to allocate command buffers!")
 }
 
 void
 CommandPipeline::Cleanup()
 {
-  auto device = m_Instance.GetDevice();
-
-  device.waitIdle();
-
-  device.destroyCommandPool(m_Pool);
+  m_Instance->GetDevice().destroyCommandPool(m_Pool);
 }
 void
 CommandPipeline::BeginBuffer(uint32_t index,
@@ -59,12 +55,10 @@ CommandPipeline::BeginBuffer(uint32_t index,
 
   vk::ClearValue clearValue{ { std::array<float, 4>{
 	0.0f, 0.0f, 0.0f, 1.0f } } };
-  vk::RenderPassBeginInfo renderPassBeginInfo{ renderPass,
-	                                           framebuffer,
-	                                           { { 0, 0 },
-	                                             m_Swapchain.GetMeta().Extent },
-	                                           1,
-	                                           &clearValue };
+
+  vk::RenderPassBeginInfo renderPassBeginInfo{
+	renderPass, framebuffer, { { 0, 0 }, m_Swapchain->Extent }, 1, &clearValue
+  };
 
   m_Buffers.at(index).beginRenderPass(renderPassBeginInfo, subpassContents);
   m_Buffers.at(index).bindPipeline(pipelineBindPoint, pipeline);
@@ -73,13 +67,13 @@ CommandPipeline::BeginBuffer(uint32_t index,
     0,
     vk::Viewport{ 0,
                   0,
-                  static_cast<float>(m_Swapchain.GetMeta().Extent.width),
-                  static_cast<float>(m_Swapchain.GetMeta().Extent.height),
+                  static_cast<float>(m_Swapchain->Extent.width),
+                  static_cast<float>(m_Swapchain->Extent.height),
                   0.0f,
                   1.0f });
 
-  m_Buffers.at(index).setScissor(
-    0, vk::Rect2D{ { 0, 0 }, m_Swapchain.GetMeta().Extent });
+  m_Buffers.at(index).setScissor(0,
+                                 vk::Rect2D{ { 0, 0 }, m_Swapchain->Extent });
 }
 
 void

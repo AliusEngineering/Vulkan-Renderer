@@ -10,10 +10,6 @@
 	branch = master
 	shallow = true
 
-[submodule "Window/3rd-party/glfw"]
-	path = Window/3rd-party/glfw
-	url = https://github.com/glfw/glfw
-	shallow = true
 [submodule "Window/3rd-party/vkfw"]
 	path = Window/3rd-party/vkfw
 	url = https://github.com/Cvelth/vkfw
@@ -27,3 +23,8 @@
 	path = 3rd-party/shaderc
 	url = https://github.com/google/shaderc
 	branch = main
+
+[submodule "Window/3rd-party/glfw"]
+	path = Window/3rd-party/glfw
+	url = https://github.com/glfw/glfw
+	branch = 3.3-stable

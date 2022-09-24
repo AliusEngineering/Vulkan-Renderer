@@ -53,3 +53,7 @@ target_link_libraries(AlsVkRenderer PUBLIC
         AlsVkWindow
         shaderc
         )
+
+# Include sandbox application
+# TODO: Provide CMake-friendly way to disable building it.
+add_subdirectory("Sandbox")

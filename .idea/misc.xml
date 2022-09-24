@@ -4,6 +4,7 @@
   <component name="CidrRootsConfiguration">
     <sourceRoots>
       <file path="$PROJECT_DIR$/Renderer" />
+      <file path="$PROJECT_DIR$/Sandbox" />
       <file path="$PROJECT_DIR$/Window" />
     </sourceRoots>
   </component>

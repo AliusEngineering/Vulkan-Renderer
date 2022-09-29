@@ -14,17 +14,23 @@ class VulkanRendererPipeline
 {
 public:
   explicit VulkanRendererPipeline();
+  ~VulkanRendererPipeline();
 
   void BeginFrame();
 
-  void Draw(uint32_t vCount,
-            uint32_t iCount,
-            uint32_t firstVertex,
-            uint32_t firstInstance);
+  void Draw(const Ref<Alius::RendererObjectBase>& object);
 
   void EndFrame();
 
   void Shutdown();
+
+  void CreateRendererObj(const Ref<Alius::RendererObjectBase>& obj);
+  void DestroyRendererObj(const Ref<Alius::VkObjectData>& implData);
+
+  std::pair<vk::Buffer, vk::DeviceMemory> CreateVertexBuffer(uint32_t dataSize,
+                                                             void* dataPointer);
+  std::pair<vk::Buffer, vk::DeviceMemory> CreateIndexBuffer(uint32_t dataSize,
+                                                            void* dataPointer);
 
 private:
   Instance* m_Instance;

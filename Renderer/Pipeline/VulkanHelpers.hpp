@@ -66,4 +66,12 @@ private:
     vk::SurfaceFormatKHR(c_PreferredVkFormat, c_PreferredVkColorspace);
 };
 
+class CommandPipelineHelpers
+{
+public:
+  static uint32_t FindMemoryType(const vk::PhysicalDevice& physicalDevice,
+                                 uint32_t typeFilter,
+                                 vk::MemoryPropertyFlags memoryProperties);
+};
+
 } // AliusModules

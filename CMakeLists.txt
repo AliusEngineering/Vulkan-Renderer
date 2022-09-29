@@ -36,9 +36,8 @@ target_precompile_headers(AlsVkRenderer PUBLIC "Renderer/VulkanRendererPch.hpp")
 
 # VulkanRenderer Base includes
 add_subdirectory("dependencies/RendererBase")
-target_link_libraries(AlsVkRenderer PUBLIC
-        RendererBase
-        )
+target_link_libraries(AlsVkRenderer PUBLIC RendererBase)
+target_include_directories(AlsVkRenderer PUBLIC "dependencies/RendererBase")
 
 target_include_directories(AlsVkRenderer PUBLIC
         Renderer
@@ -54,6 +53,20 @@ target_link_libraries(AlsVkRenderer PUBLIC
         shaderc
         )
 
+# Custom variables
+
+## Use this to copy your external shaders over and use them in Renderer
+set(ALS_VK_RENDERER_SHADER_PATH "Resources/Shaders/WorldObject")
+
 # Include sandbox application
-# TODO: Provide CMake-friendly way to disable building it.
+if (NOT DEFINED ${ALS_VK_RENDERER_BUILD_SANDBOX})
+    if (${ALS_BUILD_SANDBOXES} ON)
+        set(ALS_VK_RENDERER_BUILD_SANDBOX ON)
+    else ()
+        set(ALS_VK_RENDERER_BUILD_SANDBOX OFF)
+    endif ()
+endif ()
+
+message(STATUS "[AlsVkRenderer] Building Sandbox: ${ALS_VK_RENDERER_BUILD_SANDBOX}")
+
 add_subdirectory("Sandbox")

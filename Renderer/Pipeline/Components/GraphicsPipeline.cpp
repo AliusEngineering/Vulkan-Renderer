@@ -8,12 +8,12 @@ GraphicsPipeline::GraphicsPipeline(Instance* instance)
 {
   // Attempt to create vertex shader from source
   m_Shaders.emplace_back(m_Instance->GetDevice(),
-                         "resources/shaders/basic_vertex.glsl",
+                         "Resources/Shaders/WorldObject/vertex.glsl",
                          vk::ShaderStageFlagBits::eVertex);
 
   // Attempt to create fragment shader from source
   m_Shaders.emplace_back(m_Instance->GetDevice(),
-                         "resources/shaders/basic_fragment.glsl",
+                         "Resources/Shaders/WorldObject/fragment.glsl",
                          vk::ShaderStageFlagBits::eFragment);
 
   ConstructPipelineBakedInState();
@@ -35,8 +35,7 @@ GraphicsPipeline::GraphicsPipeline(Instance* instance)
   }
 }
 
-uint32_t
-GraphicsPipeline::AcquireImage(uint32_t index)
+uint32_t GraphicsPipeline::AcquireImage(uint32_t index)
 {
   if (index >= m_Swapchain->GetMaxConcurrentFrames()) {
 	SQD_WARN("Bad image index: tried to acquire index {} while maximum "
@@ -73,9 +72,9 @@ GraphicsPipeline::AcquireImage(uint32_t index)
   return m_CurrentImageIndex;
 }
 
-bool
-GraphicsPipeline::SubmitToComputeQueue(uint32_t index,
-                                       const vk::CommandBuffer& commandBuffer)
+bool GraphicsPipeline::SubmitToComputeQueue(
+  uint32_t index,
+  const vk::CommandBuffer& commandBuffer)
 {
   vk::Semaphore waitSemaphores[] = { m_ImageSemaphores.at(index) };
   vk::Semaphore signalSemaphores[] = { m_RenderSemaphores.at(index) };
@@ -95,8 +94,7 @@ GraphicsPipeline::SubmitToComputeQueue(uint32_t index,
   return true;
 }
 
-bool
-GraphicsPipeline::PresentQueue(uint32_t frameIndex, uint32_t imageIndex)
+bool GraphicsPipeline::PresentQueue(uint32_t frameIndex, uint32_t imageIndex)
 {
   vk::Semaphore signalSemaphores[] = { m_RenderSemaphores.at(frameIndex) };
 
@@ -121,15 +119,20 @@ GraphicsPipeline::PresentQueue(uint32_t frameIndex, uint32_t imageIndex)
   return true;
 }
 
-void
-GraphicsPipeline::ConstructPipelineBakedInState()
+void GraphicsPipeline::ConstructPipelineBakedInState()
 {
   m_PipelineBakedInState.DynamicState = { {},
 	                                      static_cast<uint32_t>(
 	                                        c_PipelineDynamicStates.size()),
 	                                      c_PipelineDynamicStates.data() };
 
-  m_PipelineBakedInState.VertexInput = { {}, 0, nullptr, 0, nullptr };
+  m_PipelineBakedInState.VertexInput = {
+	{},
+	c_WorldObjectVertexInputBindings.size(),
+	c_WorldObjectVertexInputBindings.data(),
+	c_WorldObjectVertexAttributes.size(),
+	c_WorldObjectVertexAttributes.data()
+  };
 
   m_PipelineBakedInState.InputAssembly = { {},
 	                                       vk::PrimitiveTopology::eTriangleList,
@@ -177,8 +180,7 @@ GraphicsPipeline::ConstructPipelineBakedInState()
   m_PipelineBakedInState.Layout = { {}, 0, nullptr, 0, nullptr };
 }
 
-void
-GraphicsPipeline::ConstructRenderPassState()
+void GraphicsPipeline::ConstructRenderPassState()
 {
   m_RenderPassState.AttachmentDescription = { {},
 	                                          m_Swapchain->ImageFormat,
@@ -209,8 +211,7 @@ GraphicsPipeline::ConstructRenderPassState()
   };
 }
 
-vk::PipelineLayout
-GraphicsPipeline::CreatePipelineLayout(){
+vk::PipelineLayout GraphicsPipeline::CreatePipelineLayout(){
   TRY_EXCEPT(return m_Instance->GetDevice().createPipelineLayout(
     m_PipelineBakedInState.Layout))
     THROW_ANY("Failed to create pipeline layout!")
@@ -230,8 +231,7 @@ vk::RenderPass GraphicsPipeline::CreateRenderPass()
   THROW_ANY("Failed to create render pass!")
 }
 
-vk::Pipeline
-GraphicsPipeline::CreatePipeline()
+vk::Pipeline GraphicsPipeline::CreatePipeline()
 {
   std::vector<vk::PipelineShaderStageCreateInfo> shaderStages;
   for (const auto& shader : m_Shaders) {
@@ -263,8 +263,7 @@ GraphicsPipeline::CreatePipeline()
   THROW_ANY("Failed to create graphics pipeline!")
 }
 
-std::vector<vk::Framebuffer>
-GraphicsPipeline::CreateFramebuffers()
+std::vector<vk::Framebuffer> GraphicsPipeline::CreateFramebuffers()
 {
   std::vector<vk::Framebuffer> ret;
   for (const auto& imageView : m_Swapchain->GetImageViews()) {
@@ -286,8 +285,7 @@ GraphicsPipeline::CreateFramebuffers()
   return ret;
 }
 
-void
-GraphicsPipeline::DestroyFramebuffers()
+void GraphicsPipeline::DestroyFramebuffers()
 {
   auto device = m_Instance->GetDevice();
 
@@ -298,31 +296,27 @@ GraphicsPipeline::DestroyFramebuffers()
   }
 }
 
-void
-GraphicsPipeline::RecreateFramebuffers()
+void GraphicsPipeline::RecreateFramebuffers()
 {
   m_Instance->GetDevice().waitIdle();
   m_Framebuffers = CreateFramebuffers();
 }
 
-vk::Semaphore
-GraphicsPipeline::CreateSemaphore()
+vk::Semaphore GraphicsPipeline::CreateSemaphore()
 {
   vk::SemaphoreCreateInfo createInfo{};
   TRY_EXCEPT(return m_Instance->GetDevice().createSemaphore(createInfo))
   THROW_ANY("Failed to create semaphore!")
 }
 
-vk::Fence
-GraphicsPipeline::CreateFence()
+vk::Fence GraphicsPipeline::CreateFence()
 {
   vk::FenceCreateInfo createInfo{ vk::FenceCreateFlagBits::eSignaled };
   TRY_EXCEPT(return m_Instance->GetDevice().createFence(createInfo))
   THROW_ANY("Failed to create semaphore!")
 }
 
-void
-GraphicsPipeline::RecreateSwapchain()
+void GraphicsPipeline::RecreateSwapchain()
 {
   DestroyFramebuffers();
   m_Swapchain->CleanupBeforeRecreate();
@@ -330,8 +324,7 @@ GraphicsPipeline::RecreateSwapchain()
   RecreateFramebuffers();
 }
 
-void
-GraphicsPipeline::Cleanup()
+void GraphicsPipeline::Cleanup()
 {
   auto device = m_Instance->GetDevice();
 

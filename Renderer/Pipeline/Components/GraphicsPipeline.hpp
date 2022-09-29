@@ -37,28 +37,11 @@ class GraphicsPipeline
 public:
   explicit GraphicsPipeline(Instance* instance);
 
-  /**
-   * @param index Index of image to acquire from swapchain.
-   * @return Index of acquired image or UINT32_MAX on failure. Use later to get
-   * the proper framebuffer.
-   */
   uint32_t AcquireImage(uint32_t index);
 
-  /**
-   * @param index Index of current frame
-   * @param commandBuffer Command buffer reference to submit.
-   * @return True if the result of submission is not error.
-   */
   bool SubmitToComputeQueue(uint32_t index,
                             const vk::CommandBuffer& commandBuffer);
 
-  /**
-   *
-   * @param frameIndex Index of current frame (to get appropriate synchronizers,
-   * etc.)
-   * @param imageIndex Index of image(-s) to present.
-   * @return True if presentation resulted in no errors.
-   */
   bool PresentQueue(uint32_t frameIndex, uint32_t imageIndex);
 
   Swapchain* GetSwapchain() { return m_Swapchain; }
@@ -110,7 +93,7 @@ private:
   std::vector<vk::Fence> m_RenderFences;
 
 private:
-  uint32_t m_CurrentImageIndex;
+  uint32_t m_CurrentImageIndex = 0;
 
 private:
   vk::Semaphore CreateSemaphore();
@@ -123,6 +106,19 @@ private:
   };
 
   inline static constexpr uint64_t c_SynchronizersTimeout = UINT32_MAX;
+
+  inline static constexpr std::array<vk::VertexInputBindingDescription, 1>
+    c_WorldObjectVertexInputBindings{
+	  { { 0, Alius::Vertex::GetStride(), vk::VertexInputRate::eVertex } }
+    };
+
+  inline static constexpr std::array<vk::VertexInputAttributeDescription, 4>
+    c_WorldObjectVertexAttributes{
+	  { { 0, 0, vk::Format::eR32G32Sfloat, Alius::Vertex::PositionOffset() },
+	    { 1, 0, vk::Format::eR32G32B32A32Sfloat, Alius::Vertex::ColorOffset() },
+	    { 2, 0, vk::Format::eR32Uint, Alius::Vertex::TexIndexOffset() },
+	    { 3, 0, vk::Format::eR32G32Sfloat, Alius::Vertex::TexCoordOffset() } }
+    };
 };
 
 } // AliusModules

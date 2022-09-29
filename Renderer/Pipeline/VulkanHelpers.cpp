@@ -11,8 +11,7 @@
 
 namespace AliusModules {
 
-bool
-InstanceHelpers::CheckValidationLayersSupport()
+bool InstanceHelpers::CheckValidationLayersSupport()
 {
   std::vector<vk::LayerProperties> layers =
     vk::enumerateInstanceLayerProperties();
@@ -35,8 +34,7 @@ InstanceHelpers::CheckValidationLayersSupport()
   return true;
 }
 
-bool
-InstanceHelpers::IsDeviceSuitable(const vk::PhysicalDevice& device)
+bool InstanceHelpers::IsDeviceSuitable(const vk::PhysicalDevice& device)
 {
   if (!device.getFeatures().geometryShader)
 	return false;
@@ -47,8 +45,7 @@ InstanceHelpers::IsDeviceSuitable(const vk::PhysicalDevice& device)
   return true;
 }
 
-bool
-InstanceHelpers::CheckExtensionSupport(
+bool InstanceHelpers::CheckExtensionSupport(
   const vk::PhysicalDevice& device,
   const ::std::vector<const char*>& extensionNames)
 {
@@ -64,8 +61,7 @@ InstanceHelpers::CheckExtensionSupport(
   return extensionSet.empty();
 }
 
-uint32_t
-InstanceHelpers::GetAvailableVulkanVersion()
+uint32_t InstanceHelpers::GetAvailableVulkanVersion()
 {
   auto ver = vk::enumerateInstanceVersion();
   if (VK_API_VERSION_MAJOR(ver) >= 1) {
@@ -88,9 +84,9 @@ InstanceHelpers::GetAvailableVulkanVersion()
   }
 }
 
-QueueFamilies
-InstanceHelpers::ResolveQueueFamilies(const vk::PhysicalDevice& device,
-                                      vk::SurfaceKHR& targetSurface)
+QueueFamilies InstanceHelpers::ResolveQueueFamilies(
+  const vk::PhysicalDevice& device,
+  vk::SurfaceKHR& targetSurface)
 {
   QueueFamilies ret{};
   auto queueFamilies = device.getQueueFamilyProperties();
@@ -130,9 +126,9 @@ InstanceHelpers::ResolveQueueFamilies(const vk::PhysicalDevice& device,
   return ret;
 }
 
-SwapchainSupportDetails
-SwapchainHelpers::QuerySupportDetails(const vk::PhysicalDevice& physicalDevice,
-                                      const vk::SurfaceKHR& surface)
+SwapchainSupportDetails SwapchainHelpers::QuerySupportDetails(
+  const vk::PhysicalDevice& physicalDevice,
+  const vk::SurfaceKHR& surface)
 {
   auto surfaceCaps = physicalDevice.getSurfaceCapabilitiesKHR(surface);
   auto surfaceFormats = physicalDevice.getSurfaceFormatsKHR(surface);
@@ -141,8 +137,7 @@ SwapchainHelpers::QuerySupportDetails(const vk::PhysicalDevice& physicalDevice,
   return { surfaceCaps, surfaceFormats, presentModes };
 }
 
-vk::SurfaceFormatKHR
-SwapchainHelpers::PickSurfaceFormat(
+vk::SurfaceFormatKHR SwapchainHelpers::PickSurfaceFormat(
   const std::vector<vk::SurfaceFormatKHR>& formats)
 {
   if (formats.empty())
@@ -166,8 +161,7 @@ SwapchainHelpers::PickSurfaceFormat(
   return formats.at(0);
 }
 
-vk::PresentModeKHR
-SwapchainHelpers::PickPresentMode(
+vk::PresentModeKHR SwapchainHelpers::PickPresentMode(
   const std::vector<vk::PresentModeKHR>& presentModes)
 {
   for (const auto& mode : presentModes) {
@@ -178,8 +172,7 @@ SwapchainHelpers::PickPresentMode(
   return vk::PresentModeKHR::eFifo;
 }
 
-vk::Extent2D
-SwapchainHelpers::PickExtend2D(
+vk::Extent2D SwapchainHelpers::PickExtend2D(
   const vk::SurfaceCapabilitiesKHR& surfaceCapabilities)
 {
   if (surfaceCapabilities.currentExtent.width !=
@@ -202,8 +195,7 @@ SwapchainHelpers::PickExtend2D(
   }
 }
 
-uint32_t
-SwapchainHelpers::PickOptimalConcurrentFrames(
+uint32_t SwapchainHelpers::PickOptimalConcurrentFrames(
   const vk::PresentModeKHR& presentMode)
 {
   if (presentMode == vk::PresentModeKHR::eMailbox)
@@ -212,12 +204,31 @@ SwapchainHelpers::PickOptimalConcurrentFrames(
 	return 2;
 }
 
-vk::Queue
-SwapchainHelpers::GetQueue(const vk::Device& device,
-                           uint32_t familyIndex,
-                           uint32_t queueIndex)
+vk::Queue SwapchainHelpers::GetQueue(const vk::Device& device,
+                                     uint32_t familyIndex,
+                                     uint32_t queueIndex)
 {
   return device.getQueue(familyIndex, queueIndex);
+}
+
+uint32_t CommandPipelineHelpers::FindMemoryType(
+  const vk::PhysicalDevice& physicalDevice,
+  uint32_t typeFilter,
+  vk::MemoryPropertyFlags memoryProperties)
+{
+  auto memProperties = physicalDevice.getMemoryProperties();
+
+  for (uint32_t i = 0; i < memProperties.memoryTypeCount; i++) {
+	auto memoryPropsMatch = (memProperties.memoryTypes[i].propertyFlags &
+	                         memoryProperties) == memoryProperties;
+
+	if ((typeFilter & (1 << i)) && memoryPropsMatch) {
+	  return i;
+	}
+  }
+
+  SQD_ERR("Failed to find suitable memory type!");
+  throw std::runtime_error("Failed to find suitable memory type!");
 }
 
 } // AliusModules

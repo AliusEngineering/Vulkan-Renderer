@@ -1,6 +1,6 @@
 #pragma once
 
-#include "WindowBase/Window.hpp"
+#include "Window.hpp"
 
 #include "vkfw/vkfw.hpp"
 

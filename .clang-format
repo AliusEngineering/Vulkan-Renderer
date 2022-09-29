@@ -4,3 +4,6 @@ UseTab: ForIndentation
 TabWidth: 4
 
 IncludeBlocks: Preserve
+
+AlwaysBreakAfterDefinitionReturnType: None
+AlwaysBreakAfterReturnType: None

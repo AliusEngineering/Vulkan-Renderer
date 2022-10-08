@@ -35,7 +35,7 @@ add_subdirectory("Window")
 file(GLOB_RECURSE AlsVkRendererSources CONFIGURE_DEPENDS "Renderer/**")
 message(STATUS "[AlsVkRenderer] Sources are: ${AlsVkRendererSources}")
 
-add_library(AlsVkRenderer ${AlsVkRendererSources})
+add_library(AlsVkRenderer OBJECT ${AlsVkRendererSources})
 
 target_precompile_headers(AlsVkRenderer PUBLIC "Renderer/VulkanRendererPch.hpp")
 
@@ -58,7 +58,9 @@ target_link_libraries(AlsVkRenderer PUBLIC
         shaderc
         )
 
-add_custom_command(TARGET AlsVkRenderer POST_BUILD
+## Workaround for Object libraries to copy implementation assets to the binary location after build
+add_custom_target(CopyResourcesAfterBuild ALL)
+add_custom_command(TARGET CopyResourcesAfterBuild POST_BUILD
         COMMAND ${CMAKE_COMMAND} -E copy_directory "${PROJECT_SOURCE_DIR}/Resources" "${ALS_BINARY_LOCATION}/Resources"
         )
 
@@ -73,4 +75,6 @@ endif ()
 
 message(STATUS "[AlsVkRenderer] Building Sandbox: ${ALS_VK_RENDERER_BUILD_SANDBOX}")
 
-add_subdirectory("Sandbox")
+if (${ALS_VK_RENDERER_BUILD_SANDBOX})
+    add_subdirectory("Sandbox")
+endif ()

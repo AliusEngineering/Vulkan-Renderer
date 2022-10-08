@@ -25,11 +25,7 @@ using Ref = std::shared_ptr<C>;
 constexpr bool g_ValidationLayers = true;
 #elif ALS_RELEASE
 constexpr bool g_ValidationLayers = false;
-#define SQD_DISABLE_LOGGER 1
 #else
-/* We still might want logging on, but without Vulkan validation layers
- * performance overhead.
- */
 constexpr bool g_ValidationLayers = false;
 #endif
 

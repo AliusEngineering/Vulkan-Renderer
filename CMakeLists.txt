@@ -12,7 +12,12 @@ if (CMAKE_BUILD_TYPE STREQUAL "Debug")
     add_compile_definitions(ALS_DEBUG)
 elseif (CMAKE_BUILD_TYPE STREQUAL "Release")
     message(STATUS "[AlsVkRenderer] Building in Release.")
-    add_compile_definitions(ALS_RELEASE)
+    add_compile_definitions(ALS_RELEASE SQD_DISABLE_LOGGER=1)
+endif ()
+
+if (NOT DEFINED ALS_BINARY_LOCATION)
+    message(STATUS "[AlsVkRenderer] ALS_BINARY_LOCATION not set! Setting it to be current project binary output directory")
+    set(ALS_BINARY_LOCATION ${PROJECT_BINARY_DIR})
 endif ()
 
 if (NOT LOGGER_LIBS)
@@ -53,10 +58,9 @@ target_link_libraries(AlsVkRenderer PUBLIC
         shaderc
         )
 
-# Custom variables
-
-## Use this to copy your external shaders over and use them in Renderer
-set(ALS_VK_RENDERER_SHADER_PATH "Resources/Shaders/WorldObject")
+add_custom_command(TARGET AlsVkRenderer POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy_directory "${PROJECT_SOURCE_DIR}/Resources" "${ALS_BINARY_LOCATION}/Resources"
+        )
 
 # Include sandbox application
 if (NOT DEFINED ${ALS_VK_RENDERER_BUILD_SANDBOX})

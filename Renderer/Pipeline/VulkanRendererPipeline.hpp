@@ -14,7 +14,7 @@ class VulkanRendererPipeline
 {
 public:
   explicit VulkanRendererPipeline();
-  ~VulkanRendererPipeline();
+  ~VulkanRendererPipeline() = default;
 
   void BeginFrame();
 
@@ -33,9 +33,9 @@ public:
                                                             void* dataPointer);
 
 private:
-  Instance* m_Instance;
-  GraphicsPipeline* m_GraphicsPipeline;
-  CommandPipeline* m_CommandPipeline;
+  Ref<Instance> m_Instance;
+  Ref<GraphicsPipeline> m_GraphicsPipeline;
+  Ref<CommandPipeline> m_CommandPipeline;
 
 private:
   uint32_t m_FrameIndex = 0;

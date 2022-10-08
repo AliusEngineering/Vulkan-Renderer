@@ -11,11 +11,13 @@ struct VkObjectData : public ObjectImplData
     : VertexBuffer(vertexBuffer)
   {
   }
+
   VkObjectData(vk::Buffer vertexBuffer, vk::Buffer indexBuffer)
     : VertexBuffer(vertexBuffer)
     , IndexBuffer(indexBuffer)
   {
   }
+
   VkObjectData(vk::Buffer vertexBuffer,
                vk::Buffer indexBuffer,
                vk::DeviceMemory vertexMemory,

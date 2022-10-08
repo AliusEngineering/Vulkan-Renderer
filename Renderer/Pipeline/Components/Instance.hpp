@@ -17,12 +17,12 @@ class Instance
 public:
   explicit Instance();
 
-  vk::Instance GetVkInstance() const { return m_Instance; }
-  vk::PhysicalDevice GetPhysicalDevice() const { return m_PhysicalDevice; }
-  vk::SurfaceKHR GetSurface() const { return m_Surface; }
-  vk::Device GetDevice() const { return m_Device; }
+  vk::Instance& GetVkInstance() { return m_Instance; }
+  vk::PhysicalDevice& GetPhysicalDevice() { return m_PhysicalDevice; }
+  vk::SurfaceKHR& GetSurface() { return m_Surface; }
+  vk::Device& GetDevice() { return m_Device; }
 
-  QueueFamilies GetQueueFamilies() const { return m_QueueFamilies; }
+  QueueFamilies& GetQueueFamilies() { return m_QueueFamilies; }
 
   void Cleanup();
 
@@ -40,9 +40,9 @@ private:
   QueueFamilies m_QueueFamilies{};
 
 private:
-  vk::ApplicationInfo c_AppInfo = { "Alius App",
+  vk::ApplicationInfo c_AppInfo = { nullptr,
 	                                c_AppVersion,
-	                                "Alius App",
+	                                nullptr,
 	                                c_AppVersion };
 
   vk::InstanceCreateInfo c_InstanceInfo = { {}, &c_AppInfo };

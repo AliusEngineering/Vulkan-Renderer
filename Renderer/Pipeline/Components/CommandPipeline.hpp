@@ -10,7 +10,7 @@ namespace AliusModules {
 class CommandPipeline
 {
 public:
-  explicit CommandPipeline(Instance* instance, Swapchain* swapchain);
+  explicit CommandPipeline(Ref<Instance> instance, Ref<Swapchain> swapchain);
 
   vk::Buffer CreateBuffer(vk::DeviceSize size, vk::BufferUsageFlags usageFlags);
 
@@ -38,7 +38,7 @@ public:
   void BindVertexBuffer(uint32_t index, const vk::Buffer& buffer);
   void BindIndexBuffer(uint32_t index, const vk::Buffer& buffer);
 
-  vk::CommandBuffer EndBuffer(uint32_t index);
+  vk::CommandBuffer& EndBuffer(uint32_t index);
 
   void Draw(uint32_t index,
             uint32_t vertexCount,
@@ -61,8 +61,8 @@ private:
     uint32_t count);
 
 private:
-  Instance* m_Instance;
-  Swapchain* m_Swapchain;
+  Ref<Instance> m_Instance;
+  Ref<Swapchain> m_Swapchain;
 
   vk::CommandPool m_Pool, m_TransferPool;
   std::vector<vk::CommandBuffer> m_Buffers, m_TransferBuffers;

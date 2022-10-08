@@ -31,8 +31,7 @@ VulkanWindow::VulkanWindow(size_t width, size_t height, const char* title)
   m_IsActive = true;
 }
 
-vk::SurfaceKHR
-VulkanWindow::CreateSurfaceKHR(const vk::Instance& instance)
+vk::SurfaceKHR VulkanWindow::CreateSurfaceKHR(const vk::Instance& instance)
 {
   try {
 	return vkfw::createWindowSurface(instance, m_Window);
@@ -42,8 +41,7 @@ VulkanWindow::CreateSurfaceKHR(const vk::Instance& instance)
   }
 }
 
-void
-VulkanWindow::OnUpdate()
+void VulkanWindow::OnUpdate()
 {
   // Poll glfw events
   vkfw::pollEvents();

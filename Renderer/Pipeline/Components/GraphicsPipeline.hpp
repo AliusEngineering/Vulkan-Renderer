@@ -35,7 +35,7 @@ struct RenderPassState
 class GraphicsPipeline
 {
 public:
-  explicit GraphicsPipeline(Instance* instance);
+  explicit GraphicsPipeline(Ref<Instance> instance);
 
   uint32_t AcquireImage(uint32_t index);
 
@@ -44,16 +44,16 @@ public:
 
   bool PresentQueue(uint32_t frameIndex, uint32_t imageIndex);
 
-  Swapchain* GetSwapchain() { return m_Swapchain; }
+  Ref<Swapchain> GetSwapchain() { return m_Swapchain; }
 
-  vk::RenderPass GetRenderPass() const { return m_RenderPass; }
-  vk::Framebuffer GetFramebuffer(uint32_t index) const {
+  vk::RenderPass& GetRenderPass() { return m_RenderPass; }
+
+  vk::Framebuffer& GetFramebuffer(uint32_t index){
 	TRY_EXCEPT(return m_Framebuffers.at(index))
 	  THROW_ANY("Failed to get framebuffer at " + std::to_string(index))
-
   }
 
-  vk::Pipeline GetPipeline() const
+  vk::Pipeline& GetPipeline()
   {
 	return m_Pipeline;
   }
@@ -69,14 +69,13 @@ private:
   vk::Pipeline CreatePipeline();
 
   std::vector<vk::Framebuffer> CreateFramebuffers();
-  void DestroyFramebuffers();
   void RecreateFramebuffers();
 
   void RecreateSwapchain();
 
 private:
-  Instance* m_Instance;
-  Swapchain* m_Swapchain;
+  Ref<Instance> m_Instance;
+  Ref<Swapchain> m_Swapchain;
 
   std::vector<VulkanShader> m_Shaders;
 

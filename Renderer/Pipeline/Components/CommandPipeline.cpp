@@ -4,9 +4,10 @@
 
 namespace AliusModules {
 
-CommandPipeline::CommandPipeline(Instance* instance, Swapchain* swapchain)
-  : m_Instance(instance)
-  , m_Swapchain(swapchain)
+CommandPipeline::CommandPipeline(Ref<Instance> instance,
+                                 Ref<Swapchain> swapchain)
+  : m_Instance(std::move(instance))
+  , m_Swapchain(std::move(swapchain))
 {
   m_Pool = CreateCommandPool(m_Instance->GetQueueFamilies().Compute);
   m_Buffers =
@@ -14,11 +15,10 @@ CommandPipeline::CommandPipeline(Instance* instance, Swapchain* swapchain)
 
   m_AvailableThreads = std::thread::hardware_concurrency();
 
-  SQD_LOG("Found {} available CPU threads (if the number is zero, concurrency "
-          "isn't well defined; 1 buffer will be created)! Creating the same "
-          "amount of transfer command buffers for concurrent renderer object "
-          "submission.",
-          m_AvailableThreads);
+  SQD_LOG(
+    "Found at least {} available CPU threads! Creating the same amount "
+    "of transfer command buffers for concurrent renderer object submission.",
+    m_AvailableThreads ? m_AvailableThreads : 1);
 
   m_TransferPool = CreateCommandPool(m_Instance->GetQueueFamilies().Compute);
   m_TransferBuffers = AllocateCommandBuffers(
@@ -37,7 +37,7 @@ vk::DeviceMemory CommandPipeline::AllocateDeviceMemory(
   const vk::Buffer& buffer,
   vk::MemoryPropertyFlags memoryProperties)
 {
-  auto device = m_Instance->GetDevice();
+  auto& device = m_Instance->GetDevice();
 
   auto memoryRequirements = device.getBufferMemoryRequirements(buffer);
 
@@ -59,7 +59,7 @@ void CommandPipeline::CopyToDeviceMemory(const vk::DeviceMemory& deviceMemory,
                                          void* data,
                                          vk::DeviceSize dataSize)
 {
-  auto device = m_Instance->GetDevice();
+  auto& device = m_Instance->GetDevice();
 
   try {
 	void* memoryMapping =
@@ -77,7 +77,8 @@ void CommandPipeline::CopyBuffers(const vk::Buffer& source,
                                   const vk::Buffer& destination,
                                   vk::DeviceSize bufferSize)
 {
-  auto device = m_Instance->GetDevice();
+  auto& device = m_Instance->GetDevice();
+
   auto commandBuffer = m_TransferBuffers[m_TransferBufferIndex];
   auto queue = m_Swapchain->GetComputeQueue();
 
@@ -89,15 +90,12 @@ void CommandPipeline::CopyBuffers(const vk::Buffer& source,
 
   commandBuffer.begin(transferBufferBeginInfo);
 
-  {
-	vk::BufferCopy bufferCopyRegion{ {}, {}, bufferSize };
-	commandBuffer.copyBuffer(source, destination, bufferCopyRegion);
-  }
+  vk::BufferCopy bufferCopyRegion{ {}, {}, bufferSize };
+  commandBuffer.copyBuffer(source, destination, bufferCopyRegion);
 
   commandBuffer.end();
 
-  vk::SubmitInfo bufferSubmitInfo{};
-  bufferSubmitInfo.setCommandBuffers(commandBuffer);
+  vk::SubmitInfo bufferSubmitInfo{ {}, {}, commandBuffer };
 
   queue.submit(bufferSubmitInfo);
   queue.waitIdle();
@@ -178,7 +176,7 @@ void CommandPipeline::BindIndexBuffer(uint32_t index, const vk::Buffer& buffer)
   m_Buffers.at(index).bindIndexBuffer(buffer, 0, vk::IndexType::eUint32);
 }
 
-vk::CommandBuffer CommandPipeline::EndBuffer(uint32_t index)
+vk::CommandBuffer& CommandPipeline::EndBuffer(uint32_t index)
 {
   m_Buffers.at(index).endRenderPass();
   TRY_EXCEPT(m_Buffers.at(index).end(); return m_Buffers.at(index))
@@ -207,7 +205,7 @@ void CommandPipeline::DrawIndexed(uint32_t index,
 
 void CommandPipeline::Cleanup()
 {
-  auto device = m_Instance->GetDevice();
+  auto& device = m_Instance->GetDevice();
 
   device.destroyCommandPool(m_Pool);
   device.destroyCommandPool(m_TransferPool);

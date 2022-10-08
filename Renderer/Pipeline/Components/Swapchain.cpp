@@ -1,33 +1,37 @@
 #include "Swapchain.hpp"
 
+#include <utility>
+
 namespace AliusModules {
 
-Swapchain::Swapchain(Instance* instance)
-  : m_Instance(instance)
+Swapchain::Swapchain(Ref<Instance> instance)
+  : m_Instance(std::move(instance))
 {
+  auto& device = m_Instance->GetDevice();
+
   m_Swapchain = CreateSwapchain();
 
-  m_ComputeQueue = SwapchainHelpers::GetQueue(
-    m_Instance->GetDevice(), m_Instance->GetQueueFamilies().Compute);
-  m_PresentQueue = SwapchainHelpers::GetQueue(
-    m_Instance->GetDevice(), m_Instance->GetQueueFamilies().Present);
+  m_ComputeQueue =
+    SwapchainHelpers::GetQueue(device, m_Instance->GetQueueFamilies().Compute);
+  m_PresentQueue =
+    SwapchainHelpers::GetQueue(device, m_Instance->GetQueueFamilies().Present);
 
-  m_Images = CreateImages(m_Instance->GetDevice(), m_Swapchain);
-  m_ImageViews =
-    CreateImageViews(m_Instance->GetDevice(), m_Swapchain, m_Images);
+  m_Images = CreateImages(device, m_Swapchain);
+  m_ImageViews = CreateImageViews(device, m_Swapchain, m_Images);
 }
 
-vk::SwapchainKHR
-Swapchain::CreateSwapchain(const vk::SwapchainKHR& oldSwapchain)
+vk::SwapchainKHR Swapchain::CreateSwapchain(
+  const vk::SwapchainKHR& oldSwapchain)
 {
   auto supportDetails = SwapchainHelpers::QuerySupportDetails(
     m_Instance->GetPhysicalDevice(), m_Instance->GetSurface());
 
   if (supportDetails.PresentModes.empty() ||
       supportDetails.SurfaceFormats.empty()) {
-	SQD_ERR("Selected physical devices does not support swapchain!");
-	throw std::runtime_error(
-	  "Selected physical devices does not support swapchain!");
+	SQD_ERR("Selected physical device does not feature sufficient swapchain "
+	        "support!");
+	throw std::runtime_error("Selected physical device does not feature "
+	                         "sufficient swapchain support!");
   }
 
   auto format =
@@ -51,14 +55,14 @@ Swapchain::CreateSwapchain(const vk::SwapchainKHR& oldSwapchain)
 	{},
 	m_Instance->GetSurface(),
 	imageCount,
-	format.format,
+	ImageFormat,
 	format.colorSpace,
-	extent,
+	Extent,
 	1,
 	vk::ImageUsageFlagBits::eColorAttachment
   };
 
-  auto queueFamilies = m_Instance->GetQueueFamilies();
+  auto& queueFamilies = m_Instance->GetQueueFamilies();
 
   if (queueFamilies.Present != queueFamilies.Compute) {
 	createInfo.imageSharingMode = vk::SharingMode::eConcurrent;
@@ -82,10 +86,9 @@ Swapchain::CreateSwapchain(const vk::SwapchainKHR& oldSwapchain)
   THROW_ANY("Failed to create swapchain!")
 }
 
-void
-Swapchain::CleanupBeforeRecreate()
+void Swapchain::CleanupBeforeRecreate()
 {
-  auto device = m_Instance->GetDevice();
+  auto& device = m_Instance->GetDevice();
 
   device.waitIdle();
 
@@ -94,14 +97,19 @@ Swapchain::CleanupBeforeRecreate()
   }
 }
 
-bool
-Swapchain::Recreate()
+bool Swapchain::Recreate()
 {
-  auto device = m_Instance->GetDevice();
+  auto& device = m_Instance->GetDevice();
 
   device.waitIdle();
 
-  m_Swapchain = CreateSwapchain(m_Swapchain);
+  CleanupBeforeRecreate();
+
+  m_OldSwapchain = m_Swapchain;
+
+  m_Swapchain = CreateSwapchain(m_OldSwapchain);
+
+  device.destroySwapchainKHR(m_OldSwapchain);
 
   m_Images = CreateImages(device, m_Swapchain);
   m_ImageViews = CreateImageViews(device, m_Swapchain, m_Images);
@@ -109,9 +117,9 @@ Swapchain::Recreate()
   return true;
 }
 
-std::vector<vk::Image>
-Swapchain::CreateImages(const vk::Device& device,
-                        const vk::SwapchainKHR& swapchain){
+std::vector<vk::Image> Swapchain::CreateImages(
+  const vk::Device& device,
+  const vk::SwapchainKHR& swapchain){
   TRY_EXCEPT(return device.getSwapchainImagesKHR(swapchain))
     THROW_ANY("Failed to get swapchain images!")
 }
@@ -121,7 +129,8 @@ std::vector<vk::ImageView> Swapchain::CreateImageViews(
   const vk::SwapchainKHR& swapchain,
   const std::vector<vk::Image>& images)
 {
-  std::vector<vk::ImageView> ret;
+  std::vector<vk::ImageView> imageViews;
+
   for (const auto& image : images) {
 	vk::ImageViewCreateInfo createInfo(
 	  {},
@@ -134,16 +143,15 @@ std::vector<vk::ImageView> Swapchain::CreateImageViews(
 	    vk::ComponentSwizzle::eIdentity },
 	  { vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1 });
 
-	TRY_EXCEPT(ret.emplace_back(device.createImageView(createInfo)))
+	TRY_EXCEPT(imageViews.emplace_back(device.createImageView(createInfo)))
 	THROW_ANY("Failed to create image view!")
   }
 
-  return ret;
+  return imageViews;
 }
-void
-Swapchain::Cleanup()
+void Swapchain::Cleanup()
 {
-  auto device = m_Instance->GetDevice();
+  auto& device = m_Instance->GetDevice();
 
   device.waitIdle();
 

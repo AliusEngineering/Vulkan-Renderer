@@ -1,18 +1,20 @@
 #include "GraphicsPipeline.hpp"
 
+#include <utility>
+
 namespace AliusModules {
 
-GraphicsPipeline::GraphicsPipeline(Instance* instance)
-  : m_Instance(instance)
-  , m_Swapchain(new Swapchain(m_Instance))
+GraphicsPipeline::GraphicsPipeline(Ref<Instance> instance)
+  : m_Instance(std::move(instance))
+  , m_Swapchain(std::make_shared<Swapchain>(m_Instance))
 {
-  // Attempt to create vertex shader from source
-  m_Shaders.emplace_back(m_Instance->GetDevice(),
+  auto& device = m_Instance->GetDevice();
+
+  m_Shaders.emplace_back(device,
                          "Resources/Shaders/WorldObject/vertex.glsl",
                          vk::ShaderStageFlagBits::eVertex);
 
-  // Attempt to create fragment shader from source
-  m_Shaders.emplace_back(m_Instance->GetDevice(),
+  m_Shaders.emplace_back(device,
                          "Resources/Shaders/WorldObject/fragment.glsl",
                          vk::ShaderStageFlagBits::eFragment);
 
@@ -45,16 +47,18 @@ uint32_t GraphicsPipeline::AcquireImage(uint32_t index)
 	return UINT32_MAX;
   }
 
-  auto device = m_Instance->GetDevice();
+  auto& device = m_Instance->GetDevice();
 
   (void)device.waitForFences(
     m_RenderFences.at(index), VK_TRUE, c_SynchronizersTimeout);
 
-  switch (device.acquireNextImageKHR(m_Swapchain->GetSwapchain(),
-                                     c_SynchronizersTimeout,
-                                     m_ImageSemaphores.at(index),
-                                     nullptr,
-                                     &m_CurrentImageIndex)) {
+  auto acquisitionRes = device.acquireNextImageKHR(m_Swapchain->GetSwapchain(),
+                                                   c_SynchronizersTimeout,
+                                                   m_ImageSemaphores.at(index),
+                                                   nullptr,
+                                                   &m_CurrentImageIndex);
+
+  switch (acquisitionRes) {
 	case vk::Result::eSuccess:
 	  break;
 	case vk::Result::eSuboptimalKHR:
@@ -76,16 +80,14 @@ bool GraphicsPipeline::SubmitToComputeQueue(
   uint32_t index,
   const vk::CommandBuffer& commandBuffer)
 {
-  vk::Semaphore waitSemaphores[] = { m_ImageSemaphores.at(index) };
-  vk::Semaphore signalSemaphores[] = { m_RenderSemaphores.at(index) };
-
-  vk::PipelineStageFlags waitStages[] = {
+  vk::PipelineStageFlags waitStages{
 	vk::PipelineStageFlagBits::eColorAttachmentOutput
   };
 
-  vk::SubmitInfo submitInfo{
-	waitSemaphores, waitStages, commandBuffer, signalSemaphores
-  };
+  vk::SubmitInfo submitInfo{ m_ImageSemaphores.at(index),
+	                         waitStages,
+	                         commandBuffer,
+	                         m_RenderSemaphores.at(index) };
 
   TRY_EXCEPT(
     m_Swapchain->GetComputeQueue().submit(submitInfo, m_RenderFences.at(index)))
@@ -96,13 +98,15 @@ bool GraphicsPipeline::SubmitToComputeQueue(
 
 bool GraphicsPipeline::PresentQueue(uint32_t frameIndex, uint32_t imageIndex)
 {
-  vk::Semaphore signalSemaphores[] = { m_RenderSemaphores.at(frameIndex) };
-
   auto swapchain = m_Swapchain->GetSwapchain();
 
-  vk::PresentInfoKHR presentInfo{ signalSemaphores, swapchain, imageIndex };
+  vk::PresentInfoKHR presentInfo{ m_RenderSemaphores.at(frameIndex),
+	                              swapchain,
+	                              imageIndex };
 
-  switch (m_Swapchain->GetPresentQueue().presentKHR(presentInfo)) {
+  auto presentationRes = m_Swapchain->GetPresentQueue().presentKHR(presentInfo);
+
+  switch (presentationRes) {
 	case vk::Result::eSuccess:
 	  break;
 	case vk::Result::eSuboptimalKHR:
@@ -126,13 +130,9 @@ void GraphicsPipeline::ConstructPipelineBakedInState()
 	                                        c_PipelineDynamicStates.size()),
 	                                      c_PipelineDynamicStates.data() };
 
-  m_PipelineBakedInState.VertexInput = {
-	{},
-	c_WorldObjectVertexInputBindings.size(),
-	c_WorldObjectVertexInputBindings.data(),
-	c_WorldObjectVertexAttributes.size(),
-	c_WorldObjectVertexAttributes.data()
-  };
+  m_PipelineBakedInState.VertexInput = { {},
+	                                     c_WorldObjectVertexInputBindings,
+	                                     c_WorldObjectVertexAttributes };
 
   m_PipelineBakedInState.InputAssembly = { {},
 	                                       vk::PrimitiveTopology::eTriangleList,
@@ -177,7 +177,7 @@ void GraphicsPipeline::ConstructPipelineBakedInState()
 	{ 0.0f, 0.0f, 0.0f, 0.0f }
   };
 
-  m_PipelineBakedInState.Layout = { {}, 0, nullptr, 0, nullptr };
+  m_PipelineBakedInState.Layout = { {}, nullptr, nullptr };
 }
 
 void GraphicsPipeline::ConstructRenderPassState()
@@ -267,12 +267,9 @@ std::vector<vk::Framebuffer> GraphicsPipeline::CreateFramebuffers()
 {
   std::vector<vk::Framebuffer> ret;
   for (const auto& imageView : m_Swapchain->GetImageViews()) {
-	vk::ImageView attachments[] = { imageView };
-
 	vk::FramebufferCreateInfo createInfo{ {},
 	                                      m_RenderPass,
-	                                      1,
-	                                      attachments,
+	                                      imageView,
 	                                      m_Swapchain->Extent.width,
 	                                      m_Swapchain->Extent.height,
 	                                      1 };
@@ -285,20 +282,16 @@ std::vector<vk::Framebuffer> GraphicsPipeline::CreateFramebuffers()
   return ret;
 }
 
-void GraphicsPipeline::DestroyFramebuffers()
+void GraphicsPipeline::RecreateFramebuffers()
 {
-  auto device = m_Instance->GetDevice();
+  auto& device = m_Instance->GetDevice();
 
   device.waitIdle();
 
   for (const auto& fb : m_Framebuffers) {
 	device.destroyFramebuffer(fb);
   }
-}
 
-void GraphicsPipeline::RecreateFramebuffers()
-{
-  m_Instance->GetDevice().waitIdle();
   m_Framebuffers = CreateFramebuffers();
 }
 
@@ -318,15 +311,13 @@ vk::Fence GraphicsPipeline::CreateFence()
 
 void GraphicsPipeline::RecreateSwapchain()
 {
-  DestroyFramebuffers();
-  m_Swapchain->CleanupBeforeRecreate();
   m_Swapchain->Recreate();
   RecreateFramebuffers();
 }
 
 void GraphicsPipeline::Cleanup()
 {
-  auto device = m_Instance->GetDevice();
+  auto& device = m_Instance->GetDevice();
 
   for (int i = 0; i < m_Swapchain->GetMaxConcurrentFrames(); i++) {
 	device.destroySemaphore(m_RenderSemaphores.at(i));
@@ -337,6 +328,7 @@ void GraphicsPipeline::Cleanup()
   for (const auto& fb : m_Framebuffers) {
 	device.destroyFramebuffer(fb);
   }
+
   device.destroyPipeline(m_Pipeline);
   device.destroyPipelineLayout(m_Layout);
   device.destroyRenderPass(m_RenderPass);

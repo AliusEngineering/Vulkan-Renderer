@@ -54,7 +54,8 @@ void VulkanRenderer::BeginFrame()
 
 void VulkanRenderer::Draw(std::shared_ptr<Alius::RendererObjectBase> object)
 {
-  m_RendererPipeline.Draw(object);
+  if (m_Window->IsActive())
+	m_RendererPipeline.Draw(object);
 }
 
 void VulkanRenderer::EndFrame()

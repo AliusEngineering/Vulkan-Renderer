@@ -3,21 +3,14 @@
 namespace AliusModules {
 
 VulkanRendererPipeline::VulkanRendererPipeline()
-  : m_Instance(new Instance())
-  , m_GraphicsPipeline(new GraphicsPipeline(m_Instance))
+  : m_Instance(std::make_shared<Instance>())
+  , m_GraphicsPipeline(std::make_shared<GraphicsPipeline>(m_Instance))
   , m_CommandPipeline(
-      new CommandPipeline(m_Instance, m_GraphicsPipeline->GetSwapchain()))
+      std::make_shared<CommandPipeline>(m_Instance,
+                                        m_GraphicsPipeline->GetSwapchain()))
 {
   m_MaxFrameIndex =
     m_GraphicsPipeline->GetSwapchain()->GetMaxConcurrentFrames();
-}
-
-VulkanRendererPipeline::~VulkanRendererPipeline()
-{
-  // deallocate all heap memory
-  delete m_CommandPipeline;
-  delete m_GraphicsPipeline;
-  delete m_Instance;
 }
 
 void VulkanRendererPipeline::BeginFrame()
@@ -29,8 +22,6 @@ void VulkanRendererPipeline::BeginFrame()
 	return;
   }
 
-  m_FrameBegun = true;
-
   m_CommandPipeline->ResetBuffer(m_FrameIndex);
   m_CommandPipeline->BeginBuffer(
     m_FrameIndex,
@@ -39,6 +30,8 @@ void VulkanRendererPipeline::BeginFrame()
     m_GraphicsPipeline->GetFramebuffer(m_ImageIndex),
     m_GraphicsPipeline->GetPipeline(),
     vk::PipelineBindPoint::eGraphics);
+
+  m_FrameBegun = true;
 }
 
 void VulkanRendererPipeline::Draw(
@@ -70,13 +63,14 @@ void VulkanRendererPipeline::EndFrame()
 	return;
   }
 
-  auto buffer = m_CommandPipeline->EndBuffer(m_FrameIndex);
+  m_FrameBegun = false;
+
+  auto& buffer = m_CommandPipeline->EndBuffer(m_FrameIndex);
+
   m_GraphicsPipeline->SubmitToComputeQueue(m_FrameIndex, buffer);
   m_GraphicsPipeline->PresentQueue(m_FrameIndex, m_ImageIndex);
 
   m_FrameIndex = (m_FrameIndex + 1) % m_MaxFrameIndex;
-
-  m_FrameBegun = false;
 }
 
 void VulkanRendererPipeline::Shutdown()
@@ -91,36 +85,32 @@ void VulkanRendererPipeline::Shutdown()
 void VulkanRendererPipeline::CreateRendererObj(
   const std::shared_ptr<Alius::RendererObjectBase>& obj)
 {
-  auto device = m_Instance->GetDevice();
+  auto& device = m_Instance->GetDevice();
   auto objData = obj->GetData();
 
-  vk::Buffer vertexBuffer;
-  vk::DeviceMemory vertexMemory;
+  auto objectImplData = std::make_shared<Alius::VkObjectData>();
 
   auto [vbuffer, vmemory] =
     CreateVertexBuffer(obj->GetVerticesSize(), objData.GetVerticesPointer());
 
-  vertexBuffer = vbuffer;
-  vertexMemory = vmemory;
-
-  vk::Buffer indexBuffer;
-  vk::DeviceMemory indexMemory;
+  objectImplData->VertexBuffer = vbuffer;
+  objectImplData->VertexMemory = vmemory;
 
   if (obj->GetIndicesSize() > 0) {
 	auto [ibuffer, imemory] =
 	  CreateIndexBuffer(obj->GetIndicesSize(), objData.GetIndicesPointer());
-	indexBuffer = ibuffer;
-	indexMemory = imemory;
+	objectImplData->IndexBuffer = ibuffer;
+	objectImplData->IndexMemory = imemory;
   }
 
-  obj->SetImplData(Alius::VkObjectData{
-    vertexBuffer, indexBuffer, vertexMemory, indexMemory });
+  obj->SetImplData(objectImplData);
 }
 
 void VulkanRendererPipeline::DestroyRendererObj(
   const Ref<Alius::VkObjectData>& implData)
 {
-  auto device = m_Instance->GetDevice();
+  auto& device = m_Instance->GetDevice();
+
   device.waitIdle();
 
   device.destroyBuffer(implData->VertexBuffer);
@@ -152,7 +142,7 @@ VulkanRendererPipeline::CreateVertexBuffer(uint32_t dataSize, void* dataPointer)
   m_CommandPipeline->CopyBuffers(stagingVertexBuffer, vertexBuffer, dataSize);
 
   // Free temporary resources as we don't need them anymore
-  auto device = m_Instance->GetDevice();
+  auto& device = m_Instance->GetDevice();
 
   device.destroyBuffer(stagingVertexBuffer);
   device.freeMemory(stagingVertexBufferMem);
@@ -182,7 +172,7 @@ VulkanRendererPipeline::CreateIndexBuffer(uint32_t dataSize, void* dataPointer)
   m_CommandPipeline->CopyBuffers(stagingIndexBuffer, indexBuffer, dataSize);
 
   // Free temporary resources as we don't need them anymore
-  auto device = m_Instance->GetDevice();
+  auto& device = m_Instance->GetDevice();
 
   device.destroyBuffer(stagingIndexBuffer);
   device.freeMemory(stagingIndexBufferMem);

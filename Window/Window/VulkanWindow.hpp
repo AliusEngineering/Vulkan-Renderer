@@ -16,7 +16,7 @@ public:
 
   void OnUpdate() override;
 
-  static vkfw::Window GetWindow() { return m_Window; }
+  static vkfw::Window& GetWindow() { return m_Window; }
   static vk::SurfaceKHR CreateSurfaceKHR(const vk::Instance& instance);
 
   static const char** GetRequiredInstanceExtensions(uint32_t* count)

@@ -6,6 +6,8 @@ set(CMAKE_CXX_STANDARD 17)
 
 find_package(Vulkan REQUIRED)
 
+link_libraries(Vulkan::Vulkan)
+
 # Compile time definitions
 if (CMAKE_BUILD_TYPE STREQUAL "Debug")
     message(STATUS "[AlsVkRenderer] Building in Debug.")
@@ -47,12 +49,10 @@ target_include_directories(AlsVkRenderer PUBLIC "dependencies/RendererBase")
 target_include_directories(AlsVkRenderer PUBLIC
         Renderer
         Window
-        ${Vulkan_INCLUDE_DIRS}
         ${LOGGER_INCLUDES}
         )
 
 target_link_libraries(AlsVkRenderer PUBLIC
-        ${Vulkan_LIBRARIES}
         ${LOGGER_LIBS}
         AlsVkWindow
         shaderc

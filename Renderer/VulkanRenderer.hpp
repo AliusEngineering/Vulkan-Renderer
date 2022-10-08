@@ -34,11 +34,16 @@ private:
 
 private:
   // Module registration
-  [[maybe_unused]] inline static bool s_Registration = ([]() {
-	Alius::Renderer::s_RendererModules.insert(
-	  { "AlsVkRenderer", [](size_t width, size_t height, const char* title) {
-	     return std::make_shared<VulkanRenderer>(width, height, title);
-	   } });
+  inline static bool s_Registration = ([]() {
+	auto moduleCreator = std::make_pair(
+	  "AlsVkRenderer",
+	  [](size_t width,
+	     size_t height,
+	     const char* title) -> Ref<Alius::Renderer> {
+	    return std::make_shared<VulkanRenderer>(width, height, title);
+	  });
+
+	Alius::Renderer::s_RendererModules.insert(moduleCreator);
 	return true;
   })();
 };

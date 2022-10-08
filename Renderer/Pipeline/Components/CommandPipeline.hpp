@@ -68,7 +68,7 @@ private:
   std::vector<vk::CommandBuffer> m_Buffers, m_TransferBuffers;
 
   uint32_t m_TransferBufferIndex = 0;
-  ulong m_AvailableThreads = 0;
+  unsigned long m_AvailableThreads = 0;
 };
 
 } // AliusModules

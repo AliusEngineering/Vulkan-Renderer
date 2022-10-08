@@ -52,24 +52,32 @@ uint32_t GraphicsPipeline::AcquireImage(uint32_t index)
   (void)device.waitForFences(
     m_RenderFences.at(index), VK_TRUE, c_SynchronizersTimeout);
 
-  auto acquisitionRes = device.acquireNextImageKHR(m_Swapchain->GetSwapchain(),
-                                                   c_SynchronizersTimeout,
-                                                   m_ImageSemaphores.at(index),
-                                                   nullptr,
-                                                   &m_CurrentImageIndex);
+  try {
+	auto acquisitionRes =
+	  device.acquireNextImageKHR(m_Swapchain->GetSwapchain(),
+	                             c_SynchronizersTimeout,
+	                             m_ImageSemaphores.at(index),
+	                             nullptr,
+	                             &m_CurrentImageIndex);
 
-  switch (acquisitionRes) {
-	case vk::Result::eSuccess:
-	  break;
-	case vk::Result::eSuboptimalKHR:
-	case vk::Result::eErrorOutOfDateKHR: {
-	  RecreateSwapchain();
-	  return UINT32_MAX;
+	switch (acquisitionRes) {
+	  case vk::Result::eSuccess:
+		break;
+	  case vk::Result::eSuboptimalKHR:
+	  case vk::Result::eErrorOutOfDateKHR: {
+		RecreateSwapchain();
+		return UINT32_MAX;
+	  }
+	  default: {
+		SQD_WARN("Failed to acquire image from swapchain!");
+		return UINT32_MAX;
+	  }
 	}
-	default: {
-	  SQD_WARN("Failed to acquire image from swapchain!");
-	  return UINT32_MAX;
-	}
+  } catch (vk::OutOfDateKHRError&) {
+	RecreateSwapchain();
+	return UINT32_MAX;
+  } catch (...) {
+	return UINT32_MAX;
   }
 
   device.resetFences(m_RenderFences.at(index));
@@ -104,20 +112,28 @@ bool GraphicsPipeline::PresentQueue(uint32_t frameIndex, uint32_t imageIndex)
 	                              swapchain,
 	                              imageIndex };
 
-  auto presentationRes = m_Swapchain->GetPresentQueue().presentKHR(presentInfo);
+  try {
+	auto presentationRes =
+	  m_Swapchain->GetPresentQueue().presentKHR(presentInfo);
 
-  switch (presentationRes) {
-	case vk::Result::eSuccess:
-	  break;
-	case vk::Result::eSuboptimalKHR:
-	case vk::Result::eErrorOutOfDateKHR: {
-	  RecreateSwapchain();
-	  return false;
+	switch (presentationRes) {
+	  case vk::Result::eSuccess:
+		break;
+	  case vk::Result::eSuboptimalKHR:
+	  case vk::Result::eErrorOutOfDateKHR: {
+		RecreateSwapchain();
+		return false;
+	  }
+	  default: {
+		SQD_WARN("Failed to acquire image from swapchain!");
+		return false;
+	  }
 	}
-	default: {
-	  SQD_WARN("Failed to acquire image from swapchain!");
-	  return false;
-	}
+  } catch (vk::OutOfDateKHRError&) {
+	RecreateSwapchain();
+	return UINT32_MAX;
+  } catch (...) {
+	return UINT32_MAX;
   }
 
   return true;

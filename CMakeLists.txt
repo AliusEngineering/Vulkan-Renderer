@@ -58,12 +58,6 @@ target_link_libraries(AlsVkRenderer PUBLIC
         shaderc
         )
 
-## Workaround for Object libraries to copy implementation assets to the binary location after build
-add_custom_target(CopyResourcesAfterBuild ALL)
-add_custom_command(TARGET CopyResourcesAfterBuild POST_BUILD
-        COMMAND ${CMAKE_COMMAND} -E copy_directory "${PROJECT_SOURCE_DIR}/Resources" "${ALS_BINARY_LOCATION}/Resources"
-        )
-
 # Include sandbox application
 if (NOT DEFINED ${ALS_VK_RENDERER_BUILD_SANDBOX})
     if (${ALS_BUILD_SANDBOXES} ON)

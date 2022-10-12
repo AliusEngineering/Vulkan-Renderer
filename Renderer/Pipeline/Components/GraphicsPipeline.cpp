@@ -255,6 +255,13 @@ vk::Pipeline GraphicsPipeline::CreatePipeline()
 	  shaderStages.emplace_back(shader.GetStageCreateInfo());
   }
 
+  if (shaderStages.empty()) {
+	SQD_ERR("To create graphics pipeline, it should have at least a proper "
+	        "vertex shader bound!");
+	throw std::runtime_error("To create graphics pipeline, it should have at "
+	                         "least a proper vertex shader bound!");
+  }
+
   vk::GraphicsPipelineCreateInfo createInfo{
 	{},
 	static_cast<uint32_t>(shaderStages.size()),

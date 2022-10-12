@@ -11,7 +11,7 @@ namespace AliusModules {
 class VulkanRenderer : public Alius::Renderer
 {
 public:
-  VulkanRenderer(size_t width, size_t height, const char* title);
+  VulkanRenderer(const Alius::RendererSpec& spec);
   ~VulkanRenderer() override;
 
   Ref<Alius::Window> GetWindow() const override;
@@ -35,15 +35,15 @@ private:
 private:
   // Module registration
   inline static bool s_Registration = ([]() {
-	auto moduleCreator = std::make_pair(
-	  "AlsVkRenderer",
-	  [](size_t width,
-	     size_t height,
-	     const char* title) -> Ref<Alius::Renderer> {
-	    return std::make_shared<VulkanRenderer>(width, height, title);
-	  });
+	Alius::Renderer::ModuleSpec moduleSpec{
+	  [](const Alius::RendererSpec& spec) -> Ref<Alius::Renderer> {
+	    return std::make_shared<VulkanRenderer>(spec);
+	  }
+	};
 
-	Alius::Renderer::s_RendererModules.insert(moduleCreator);
+	Alius::Renderer::s_RendererModules.insert(
+	  std::make_pair("AlsVkRenderer", moduleSpec));
+
 	return true;
   })();
 };

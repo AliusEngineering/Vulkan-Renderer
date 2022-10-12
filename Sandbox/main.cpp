@@ -1,9 +1,10 @@
 #include "VulkanRenderer.hpp"
 
-#define LOAD_RENDERER(store, ...)                                              \
+#define LOAD_RENDERER(store, spec)                                             \
   try {                                                                        \
-	auto creator = Alius::Renderer::s_RendererModules.at("AlsVkRenderer");     \
-	store = creator(__VA_ARGS__);                                              \
+	auto creator =                                                             \
+	  Alius::Renderer::s_RendererModules.at("AlsVkRenderer").Creator;          \
+	store = creator(spec);                                                     \
   } catch (...) {                                                              \
 	throw std::runtime_error("Failed to allocate AlsVkRenderer!");             \
   }
@@ -15,8 +16,12 @@ int main()
 {
   SQD::Logger::EnableLogger();
 
+  Alius::RendererSpec rendererSpec{ c_WinWidth,
+	                                c_WinHeight,
+	                                "Vulkan Renderer Sandbox" };
   std::shared_ptr<Alius::Renderer> renderer;
-  LOAD_RENDERER(renderer, c_WinWidth, c_WinHeight, "Vulkan Renderer Sandbox")
+
+  LOAD_RENDERER(renderer, rendererSpec)
 
   auto window = renderer->GetWindow();
 

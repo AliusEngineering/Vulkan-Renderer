@@ -4,8 +4,9 @@
 
 namespace AliusModules {
 
-VulkanRenderer::VulkanRenderer(size_t width, size_t height, const char* title)
-  : m_Window(std::make_shared<VulkanWindow>(width, height, title))
+VulkanRenderer::VulkanRenderer(const Alius::RendererSpec& spec)
+  : m_Window(
+      std::make_shared<VulkanWindow>(spec.Width, spec.Height, spec.Title))
   , m_RendererPipeline()
 {
 }
